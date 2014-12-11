@@ -1,4 +1,5 @@
 import math
+import time
 
 '''
 states = ('Healthy', 'Fever')
@@ -25,6 +26,7 @@ def robotparse(fd):
     trans_prob = {}
     emiss_prob = {}
     
+    start_count = 12.0
     trans_count = {}
     emiss_count = {}
     
@@ -42,22 +44,23 @@ def robotparse(fd):
         states.add(info[0])
         #print(info)
         observ.add(info[1])
-        '''
+        
         try:
-            start_prob[info[0]] += 1
+            start_count += 1.0
+            start_prob[info[0]] += 1.0
         except KeyError:
-            start_prob[info[0]] = 2
-        '''
-        start_prob[info[0]] = 1.0/12.0
+            start_prob[info[0]] = 2.0
+        
+        # start_prob[info[0]] = 1.0/12.0
         
         try:
             emiss_count[info[0]] += 1.0
             emiss_prob[info[0]][info[1]] += 1.0
         except KeyError:
-            emiss_count[info[0]] = 3.0
             try:
                 emiss_prob[info[0]][info[1]] = 2.0
             except KeyError:
+                emiss_count[info[0]] = 5.0
                 emiss_prob[info[0]] = {info[1]: 2.0}
         
         if last != None:
@@ -65,14 +68,115 @@ def robotparse(fd):
                 trans_count[last] += 1.0
                 trans_prob[last][info[0]] += 1.0
             except KeyError:
-                trans_count[last] = 3.0
                 try:
                     trans_prob[last][info[0]] = 2.0
                 except KeyError:
+                    trans_count[last] = 13.0
                     trans_prob[last] = {info[0]: 2.0}
             last = info[0]
         else:
             last = info[0]
+
+    for key in start_prob:
+        start_prob[key] = start_prob[key]/start_count
+
+    # print(emiss_prob)
+    # print(trans_prob)    
+            
+    for key in emiss_prob:
+        for ob in observ:
+            try:
+                emiss_prob[key][ob] = emiss_prob[key][ob]/emiss_count[key]
+            except KeyError:
+                emiss_prob[key][ob] = 1.0/emiss_count[key]
+    
+    for key in trans_prob:
+        for state in states:
+            try:
+                trans_prob[key][state] = trans_prob[key][state]/trans_count[key]
+            except KeyError:
+                trans_prob[key][state] = 1.0/trans_count[key] 
+
+    # print(emiss_prob)
+    # print(trans_prob)
+
+    obs = []
+    paths = []
+    temp1 = []
+    temp2 = []
+    for line in fd:
+        line = line.rstrip('\n').split()
+        if line[0] == '.':
+            obs.append(list(temp1))
+            paths.append(list(temp2))
+            temp1 = []
+            temp2 = []
+            continue
+        temp1.append(line[1])
+        temp2.append(line[0])
+
+    return states, obs, start_prob, trans_prob, emiss_prob, paths  
+
+def typoparse(fd):
+    states = set()
+    observ = set()
+    start_prob = {}
+    trans_prob = {}
+    emiss_prob = {}
+    
+    start_count = 26.0
+    trans_count = {}
+    emiss_count = {}
+    
+    info = []
+    last = None
+    
+    for line in fd:
+        line = line.rstrip('\n')
+        info = line.split(' ')
+        # if info[0] == '_':
+        #     last = None
+        #     continue
+        if info[0] == '..':
+            break
+        states.add(info[0])
+        #print(info)
+        observ.add(info[1])
+        
+        try:
+            start_count += 1.0
+            start_prob[info[0]] += 1.0
+        except KeyError:
+            start_prob[info[0]] = 2.0
+        
+        # start_prob[info[0]] = 1.0/26.0
+        
+        try:
+            emiss_count[info[0]] += 1.0
+            emiss_prob[info[0]][info[1]] += 1.0
+        except KeyError:
+            try:
+                emiss_prob[info[0]][info[1]] = 2.0
+            except KeyError:
+                emiss_count[info[0]] = 27.0
+                emiss_prob[info[0]] = {info[1]: 2.0}
+        
+        if last != None:
+            try:
+                trans_count[last] += 1.0
+                trans_prob[last][info[0]] += 1.0
+            except KeyError:
+                try:
+                    trans_prob[last][info[0]] = 2.0
+                except KeyError:
+                    trans_count[last] = 27.0
+                    trans_prob[last] = {info[0]: 2.0}
+            last = info[0]
+        else:
+            last = info[0]
+
+    for key in start_prob:
+        start_prob[key] = start_prob[key]/start_count
             
     for key in emiss_prob:
         for ob in observ:
@@ -87,14 +191,113 @@ def robotparse(fd):
                 trans_prob[key][state] = trans_prob[key][state]/trans_count[key]
             except KeyError:
                 trans_prob[key][state] = 1.0/trans_count[key]        
-    ob = []
+    obs = []
+    paths = []
+    temp1 = []
+    temp2 = []
     for line in fd:
         line = line.rstrip('\n').split()
-        if line[0] == '.':
+        if line[0] == '_':
+            obs.append(list(temp1))
+            paths.append(list(temp2))
+            temp1 = []
+            temp2 = []
+            continue
+        temp1.append(line[1])
+        temp2.append(line[0])
+    # obs.append(list(temp1))
+    # paths.append(list(temp2))
+
+    return states, obs, start_prob, trans_prob, emiss_prob, paths  
+      
+def topicparse(fd):
+    states = set()
+    observ = set()
+    start_prob = {}
+    trans_prob = {}
+    emiss_prob = {}
+    
+    trans_count = {}
+    emiss_count = {}
+    
+    info = []
+    last = None
+    
+    for line in fd:
+        line = line.rstrip('\n')
+        info = line.split(' ')
+        if info[0] == '..':
             break
-        ob.append(line[1])    
-    return states, ob, start_prob, trans_prob, emiss_prob   
-   
+        states.add(info[0])
+        start_prob[info[0]] = 1.0
+        #print(info)
+
+        if last != None:
+            try:
+                trans_count[last] += 1.0
+                trans_prob[last][info[0]] += 1.0
+            except KeyError:
+                try:
+                    trans_prob[last][info[0]] = 2.0
+                except KeyError:
+                    trans_count[last] = 7.0
+                    trans_prob[last] = {info[0]: 2.0}
+            last = info[0]
+        else:
+            last = info[0]
+
+
+        for i in range(1,int(len(info))):
+            observ.add(info[i])
+            '''
+            try:
+                start_prob[info[0]] += 1
+            except KeyError:
+                start_prob[info[0]] = 2
+            '''
+            
+            
+            try:
+                emiss_count[info[0]] += 1.0
+                emiss_prob[info[0]][info[i]] += 1.0
+            except KeyError:
+                try:
+                    emiss_prob[info[0]][info[i]] = 2.0
+                except KeyError:
+                    emiss_count[info[0]] = 6.0
+                    emiss_prob[info[0]] = {info[i]: 2.0}
+            
+    
+    for key in start_prob:
+        start_prob[key] = 1.0/len(states)
+
+    for key in emiss_prob:
+        for ob in observ:
+            try:
+                emiss_prob[key][ob] = emiss_prob[key][ob]/emiss_count[key]
+            except KeyError:
+                emiss_prob[key][ob] = 1.0/emiss_count[key]
+    
+    for key in trans_prob:
+        for state in states:
+            try:
+                trans_prob[key][state] = trans_prob[key][state]/trans_count[key]
+            except KeyError:
+                trans_prob[key][state] = 1.0/trans_count[key]        
+    obs = []
+    paths = []
+    temp1 = []
+    temp2 = []
+    for line in fd:
+        line = line.rstrip('\n').split()
+        for i in range(1,int(len(line)/20)):
+            temp1.append(line[i])
+            temp2.append(line[0])
+    obs.append(list(temp1))
+    paths.append(list(temp2))
+
+    return states, obs, start_prob, trans_prob, emiss_prob, paths 
+
    
 def viterbi(obs, states, start_p, trans_p, emit_p):
     V = [{}]
@@ -103,25 +306,38 @@ def viterbi(obs, states, start_p, trans_p, emit_p):
     # Initialize base cases (t == 0)
     for y in states:
         #V[0][y] = start_p[y] * emit_p[y][obs[0]]
-        V[0][y] = start_p[y] * emit_p[y][obs[0]]
+        V[0][y] = 10**(math.log10(start_p[y]) + math.log10(emit_p[y][obs[0]]))
         path[y] = [y]
- 
+    thing = len(obs)
     # Run Viterbi for t > 0
     for t in range(1, len(obs)):
         V.append({})
         newpath = {}
  
         for y in states:
-            (prob, state) = max((2**(math.log(V[t-1][y0]) + math.log(trans_p[y0][y]) + math.log(emit_p[y][obs[t]])), y0) for y0 in states)
+            lep = 0
+            try:
+                lep = math.log10(emit_p[y][obs[t]])
+            except KeyError:
+                lep = math.log10(1.0/len(emit_p[y]))
+            temp = []
+            for y0 in states:
+                try:
+                    temp.append((10**(math.log10(V[t-1][y0]) + math.log10(trans_p[y0][y]) + lep), y0))
+                except ValueError:
+                    temp.append((-1,y0))
+
+            (prob, state) = max(temp)
             V[t][y] = prob
             newpath[y] = path[state] + [y]
  
         # Don't need to remember the old paths
         path = newpath
+        print(str(int((t*100)/thing)), end=chr(13))
     n = 0           # if only one element is observed max is sought in the initialization values
     if len(obs) != 1:
         n = t
-    print_dptable(V)
+    #print_dptable(V)
     (prob, state) = max((V[n][y], y) for y in states)
     return (prob, path[state])
  
@@ -133,23 +349,67 @@ def print_dptable(V):
         s += " ".join("%.7s" % ("%f" % v[y]) for v in V)
         s += "\n"
     print(s)
-    
+  
+def compare(a, b):
+    if len(a)!=len(b) or len(a)==0:
+        print("length error")
+        return 0
+    count = 0
+    for i in range(len(a)):
+        if a[i] == b[i]:
+            count += 1
+    return (count*100)/len(a)
+
+
 def example():
-    fd = open("robot_no_momemtum.data", 'r')
-    states, observ, start_prob, trans_prob, emiss_prob = robotparse(fd)
-    
-    #print(states)
-    #print(observ)
-    #print(start_prob)
-    #print(trans_prob)
-    #print(emiss_prob)
-    
-    return viterbi(tuple(observ),
+    # fd = open("robot_no_momemtum.data", 'r')
+    # fd = open("typos10.data", 'r')
+    fd = open("topics.data", 'r')
+
+    fdout = open("output.txt", 'w')
+    # fdout = open("trans.txt", 'w')
+    # states, all_observ, start_prob, trans_prob, emiss_prob, paths = robotparse(fd)
+    # states, all_observ, start_prob, trans_prob, emiss_prob, paths = typoparse(fd)
+    states, all_observ, start_prob, trans_prob, emiss_prob, paths = topicparse(fd)
+    # fdout.write(str(emiss_prob))
+
+    # temp_trans = {'religion': {'religion': 0.6, 'windows': 0.08, 'cars': 0.08, 'baseball': 0.08, 'guns': 0.08, 'medicine': 0.08}, 
+    #                 'windows': {'religion': 0.055, 'windows': 0.6, 'cars': 0.085, 'baseball': 0.085, 'guns': 0.085, 'medicine': 0.09}, 
+    #                 'cars': {'religion': 0.015, 'windows': 0.1, 'cars': 0.6, 'medicine': 0.1, 'guns': 0.09, 'baseball': 0.095}, 
+    #                 'baseball': {'religion': 0.03, 'windows': 0.09, 'cars': 0.1, 'baseball': 0.6, 'guns': 0.09, 'medicine': 0.09}, 
+    #                 'guns': {'religion': 0.02, 'windows': 0.05, 'cars': 0.05, 'baseball': 0.09, 'guns': 0.6, 'medicine': 0.09}, 
+    #                 'medicine': {'religion': 0.07, 'windows': 0.085, 'cars': 0.085, 'medicine': 0.6, 'guns': 0.08, 'baseball': 0.08}} 
+
+    # print(states)
+    print(len(all_observ[0]))
+    # print(start_prob)
+    # print(trans_prob)
+    # print(emiss_prob)
+    # return 0
+    t1 = time.time()
+    totalsame = 0
+    for i in range(len(paths)):
+        prob, path = viterbi(tuple(all_observ[i]),
                    tuple(states),
                    start_prob,
                    trans_prob,
+                   # trans_prob,
                    emiss_prob)
+        same = compare(path, paths[i])
+        totalsame += same
+        print(prob)
+        fdout.write(str(path) + "\n" + str(paths[i]) + "\n" + "Sameness: " + str(same) + "\n")
+    t2 = time.time()
+    print(totalsame/len(paths))
 
+     # return viterbi(tuple(observ),
+     #               tuple(states),
+     #               start_prob,
+     #               trans_prob,
+     #               emiss_prob)
+    timeness = t2 - t1
+    ret = str(int((timeness/60)/60))+":"+str(int((timeness/60)%60))+":"+str(int(timeness%60))
+    return ret
     
     #return viterbi(robotparse(fd))
 print(example())
