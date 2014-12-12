@@ -1,3 +1,5 @@
+## Assignment 5
+
 import getopt, math, time, sys
    
 def robotparse(fd):
@@ -6,11 +8,9 @@ def robotparse(fd):
     start_prob = {}
     trans_prob = {}
     emiss_prob = {}
-    
     start_count = 12.0
     trans_count = {}
     emiss_count = {}
-    
     info = []
     last = None
     
@@ -24,7 +24,6 @@ def robotparse(fd):
             break
         states.add(info[0])
         observ.add(info[1])
-        
         try:
             start_count += 1.0
             start_prob[info[0]] += 1.0
@@ -105,13 +104,10 @@ def typoparse(fd):
     for line in fd:
         line = line.rstrip('\n')
         info = line.split(' ')
-        # if info[0] == '_':
-        #     last = None
-        #     continue
+
         if info[0] == '..':
             break
         states.add(info[0])
-        #print(info)
         observ.add(info[1])
         
         try:
@@ -119,8 +115,6 @@ def typoparse(fd):
             start_prob[info[0]] += 1.0
         except KeyError:
             start_prob[info[0]] = 2.0
-        
-        # start_prob[info[0]] = 1.0/26.0
         
         try:
             emiss_count[info[0]] += 1.0
@@ -204,7 +198,6 @@ def topicparse(fd):
             continue
         states.add(info[0])
         start_prob[info[0]] = 1.0
-        #print(info)
 
         if last != None:
             try:
@@ -227,14 +220,6 @@ def topicparse(fd):
 
         for i in range(1,int(len(info))):
             observ.add(info[i])
-            '''
-            try:
-                start_prob[info[0]] += 1
-            except KeyError:
-                start_prob[info[0]] = 2
-            '''
-            
-            
             try:
                 emiss_count[info[0]] += 1.0
                 emiss_prob[info[0]][info[i]] += 1.0
@@ -245,7 +230,6 @@ def topicparse(fd):
                     emiss_count[info[0]] = 6.0
                     emiss_prob[info[0]] = {info[i]: 2.0}
             
-    
     for key in start_prob:
         start_prob[key] = 1.0/len(states)
 
@@ -264,13 +248,6 @@ def topicparse(fd):
                 trans_prob[key][state] = 1.0/trans_count[key]        
     obs = []
     paths = []
-    # temp1 = []
-    # temp2 = []
-    # for line in fd:
-    #     line = line.rstrip('\n').split()
-    #     for i in range(1,int(len(line)/20)):
-    #         temp1.append(line[i])
-    #         temp2.append(line[0])
     obs.append(list(temp1))
     paths.append(list(temp2))
 
@@ -281,12 +258,10 @@ def viterbi(obs, states, start_p, trans_p, emit_p):
     V = [{}]
     path = {}
  
-    # Initialize base cases (t == 0)
     for y in states:
         V[0][y] = (math.log10(start_p[y]) + math.log10(emit_p[y][obs[0]]))
         path[y] = [y]
     thing = len(obs)
-    # Run Viterbi for t > 0
     err =0
     for t in range(1, len(obs)):
         V.append({})
@@ -304,17 +279,15 @@ def viterbi(obs, states, start_p, trans_p, emit_p):
             V[t][y] = prob
             newpath[y] = path[state] + [y]
  
-        # Don't need to remember the old paths
-        path = newpath
+         path = newpath
         pers = int((t*100)/(thing-1)) 
         print("["+"="*int(pers/5)+" "*(20-int(pers/5))+"]: "+str(pers)+"%", end=chr(13))
-    n = 0           # if only one element is observed max is sought in the initialization values
+    n = 0 
     if len(obs) != 1:
         n = t
     (prob, state) = max((V[n][y], y) for y in states)
     return (10**prob, path[state])
- 
-# Don't study this, it just prints a table of the steps.
+
 def print_dptable(V):
     s = "    " + " ".join(("%7d" % i) for i in range(len(V))) + "\n"
     for y in V[0]:
@@ -340,16 +313,12 @@ def compare(a, b):
             count += 1
     return (count*100)/len(a)
 
-
 def main():
-
     try:
         optlist, remainder = getopt.getopt(sys.argv[1:], 'p:o:h')
-        #If no arguments profided
         if len(optlist) == 0:
             print( "***Options required***" )
             usage()
-        #if inappropriate argument provided
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -361,15 +330,12 @@ def main():
             if a == "1":
                 fd = open("robot_no_momemtum.data", 'r')
                 func = robotparse
-                # states, all_observ, start_prob, trans_prob, emiss_prob, paths = robotparse(fd)
             elif a == "2":
                 fd = open("typos10.data", 'r')
                 func = typoparse
-                # states, all_observ, start_prob, trans_prob, emiss_prob, paths = typoparse(fd)
             elif a == "3":
                 fd = open("topics.data", 'r')
                 func = topicparse
-                # states, all_observ, start_prob, trans_prob, emiss_prob, paths = topicparse(fd)
         elif o == "-o":
             if a == "1":
                 states, all_observ, start_prob, trans_prob, emiss_prob, paths = func(fd)
