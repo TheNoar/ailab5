@@ -1,4 +1,6 @@
 ## Assignment 5
+## Noah Dillon, Logan Bates, Bryan Gaydon
+## CSCI 3202 - Hoenigman
 
 import getopt, math, time, sys
    
@@ -376,7 +378,7 @@ def usage():
     -o: Specify the HMM order (1 or 2)
 
     Example Usage: 
-    "python assignment5.py -p 1 -o 1" will run the toy robot with a first order HMM
+    "python3 assignment5.py -p 1 -o 1" will run the toy robot with a first order HMM
   ---------
   """ )
   sys.exit(2)
