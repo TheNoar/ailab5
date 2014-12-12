@@ -1,5 +1,4 @@
-import math
-import time
+import math, time, sys
 
 '''
 states = ('Healthy', 'Fever')
@@ -222,12 +221,17 @@ def topicparse(fd):
     
     info = []
     last = None
-    
+
+    testset = True
+    temp1 = []
+    temp2 = []
+
     for line in fd:
         line = line.rstrip('\n')
         info = line.split(' ')
         if info[0] == '..':
-            break
+            testset = False
+            continue
         states.add(info[0])
         start_prob[info[0]] = 1.0
         #print(info)
@@ -246,6 +250,10 @@ def topicparse(fd):
         else:
             last = info[0]
 
+        if testset:
+            for j in range(1,int(len(info)/4)):
+                temp1.append(info[j])
+                temp2.append(info[0])
 
         for i in range(1,int(len(info))):
             observ.add(info[i])
@@ -286,13 +294,13 @@ def topicparse(fd):
                 trans_prob[key][state] = 1.0/trans_count[key]        
     obs = []
     paths = []
-    temp1 = []
-    temp2 = []
-    for line in fd:
-        line = line.rstrip('\n').split()
-        for i in range(1,int(len(line)/20)):
-            temp1.append(line[i])
-            temp2.append(line[0])
+    # temp1 = []
+    # temp2 = []
+    # for line in fd:
+    #     line = line.rstrip('\n').split()
+    #     for i in range(1,int(len(line)/20)):
+    #         temp1.append(line[i])
+    #         temp2.append(line[0])
     obs.append(list(temp1))
     paths.append(list(temp2))
 
@@ -306,40 +314,49 @@ def viterbi(obs, states, start_p, trans_p, emit_p):
     # Initialize base cases (t == 0)
     for y in states:
         #V[0][y] = start_p[y] * emit_p[y][obs[0]]
-        V[0][y] = 10**(math.log10(start_p[y]) + math.log10(emit_p[y][obs[0]]))
+        V[0][y] = (math.log10(start_p[y]) + math.log10(emit_p[y][obs[0]]))
         path[y] = [y]
     thing = len(obs)
     # Run Viterbi for t > 0
+    err =0
     for t in range(1, len(obs)):
         V.append({})
         newpath = {}
  
         for y in states:
-            lep = 0
-            try:
-                lep = math.log10(emit_p[y][obs[t]])
-            except KeyError:
-                lep = math.log10(1.0/len(emit_p[y]))
+            # lep = 0
+            # try:
+            #     lep = math.log10(emit_p[y][obs[t]])
+            # except KeyError:
+            #     err+=1
+            #     lep = math.log10(min(emit_p[y].values()))
             temp = []
             for y0 in states:
                 try:
-                    temp.append((10**(math.log10(V[t-1][y0]) + math.log10(trans_p[y0][y]) + lep), y0))
-                except ValueError:
-                    temp.append((-1,y0))
+                    temp.append(((V[t-1][y0] + math.log10(trans_p[y0][y]) + math.log10(emit_p[y][obs[t]])), y0))
+                except KeyError:
+                    # print("v",V[t-1][y0])
+                    # print("t",trans_p[y0][y])
+                    # print("e",emit_p[y][obs[t]])
 
+                    temp.append((-sys.maxsize-1,y0))
             (prob, state) = max(temp)
             V[t][y] = prob
             newpath[y] = path[state] + [y]
  
         # Don't need to remember the old paths
         path = newpath
-        print(str(int((t*100)/thing)), end=chr(13))
+        pers = int((t*100)/thing)
+        print("["+"="*int(pers/5)+" "*(20-int(pers/5))+"]: "+str(pers)+"%", end=chr(13))
+    # fdout = open("trans.txt", 'w')
+    # fdout.write(str(V))
     n = 0           # if only one element is observed max is sought in the initialization values
     if len(obs) != 1:
         n = t
     #print_dptable(V)
+    # print(err,thing)
     (prob, state) = max((V[n][y], y) for y in states)
-    return (prob, path[state])
+    return (10**prob, path[state])
  
 # Don't study this, it just prints a table of the steps.
 def print_dptable(V):
@@ -397,7 +414,7 @@ def example():
                    emiss_prob)
         same = compare(path, paths[i])
         totalsame += same
-        print(prob)
+        # print(prob)
         fdout.write(str(path) + "\n" + str(paths[i]) + "\n" + "Sameness: " + str(same) + "\n")
     t2 = time.time()
     print(totalsame/len(paths))
